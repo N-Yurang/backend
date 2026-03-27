@@ -1,0 +1,22 @@
+# 패키지
+node_modules/
+
+# 환경변수 
+.env
+.env.*
+
+# 로그 파일
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# 운영체제 자동 생성 파일
+.DS_Store
+Thumbs.db
+
+# 에디터 설정
+.vscode/
+.idea/
+
+# AI 참고용 문서
+Claude.md
