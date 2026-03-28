@@ -11,7 +11,7 @@
 | 서버 프레임워크 | Node.js + Express |
 | 데이터베이스 | MySQL |
 | AI 서버 통신 | Axios |
-| 외부 지도 API | - |
+| 외부 지도 API | 카카오맵 API |
 | 기타 | dotenv, cors, nodemon |
 
 ---
