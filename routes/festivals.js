@@ -3,14 +3,15 @@ const router = express.Router();
 const db = require('../db/connection');
 
 // GET /api/festivals?month=3
-// 이달의 축제 목록
 router.get('/', async (req, res, next) => {
   try {
     const month = req.query.month || new Date().getMonth() + 1;
 
     const [festivals] = await db.query(
-      'SELECT * FROM festivals WHERE month = ? ORDER BY created_at DESC',
-      [month]
+      `SELECT * FROM festivals 
+       WHERE MONTH(start_date) = ? OR MONTH(end_date) = ?
+       ORDER BY start_date ASC`,
+      [month, month]
     );
 
     res.json({ status: 'success', data: { festivals } });
