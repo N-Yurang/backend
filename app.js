@@ -14,6 +14,15 @@ app.use(cors({
 }));
 
 // ── 라우터 연결 ────────────────────────────────
+app.use('/api/auth',            require('./routes/auth'));
+app.use('/api/users',           require('./routes/users'));
+app.use('/api/places',          require('./routes/places'));
+app.use('/api/destinations',    require('./routes/destinations'));
+app.use('/api/festivals',       require('./routes/festivals'));
+app.use('/api/recommendations', require('./routes/recommendations'));
+app.use('/api/chat',            require('./routes/chat'));
+app.use('/api/playlists',       require('./routes/playlists'));
+app.use('/api/plans',           require('./routes/plans'));
 
 // ── 기본 헬스체크 ──────────────────────────────
 app.get('/', (req, res) => {
