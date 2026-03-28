@@ -19,4 +19,4 @@ Thumbs.db
 .idea/
 
 # AI 참고용 문서
-Claude.md
+.claude/*
