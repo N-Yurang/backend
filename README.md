@@ -66,7 +66,7 @@ npm install
 루트에 `.env` 파일을 생성하고 아래 내용을 작성
 
 ```env
-PORT=4000
+PORT=5000
 DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=DB비밀번호
@@ -87,7 +87,7 @@ npm start
 터미널에 아래 메시지가 뜨면 성공
 
 ```
-✅ 서버 실행 중: http://localhost:4000
+✅ 서버 실행 중: http://localhost:5000
 ```
 
 ### 5. 로컬 개발 시 실행 순서
@@ -107,7 +107,7 @@ cd frontend && npm run dev
 
 ## API 목록
 
-> 기본 주소: `http://localhost:4000`
+> 기본 주소: `http://localhost:5000`
 
 ### 인증
 
