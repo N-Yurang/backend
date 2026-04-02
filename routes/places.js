@@ -37,7 +37,7 @@ router.get('/search', async (req, res, next) => {
 router.get('/trends', async (req, res, next) => {
   try {
     const [places] = await db.query(
-      `SELECT p.place_id, p.name, p.location, p.image_url, p.description,
+      `SELECT p.place_id, p.name, p.location, p.image_url, p.description, p.tags,
               mt.media_source, mt.keyword, mt.trend_score
        FROM Places p
        JOIN Media_Trends mt ON p.place_id = mt.place_id
