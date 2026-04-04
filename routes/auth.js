@@ -11,7 +11,7 @@ router.post('/register', async (req, res, next) => {
     const { travel_frequency, tags } = preferences;
 
     await db.query(
-      'INSERT INTO users (id, password, name, age, gender, travel_frequency, tags) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO users (id, password, name, age, gender, travel_frequency, tags) VALUES ($1, $2, $3, $4, $5, $6, $7)',
       [user_id, password, name, age, gender, travel_frequency, JSON.stringify(tags)]
     );
 
@@ -27,8 +27,8 @@ router.post('/login', async (req, res, next) => {
   try {
     const { user_id, password } = req.body;
 
-    const [rows] = await db.query(
-      'SELECT * FROM users WHERE id = ? AND password = ?',
+    const { rows } = await db.query(
+      'SELECT * FROM users WHERE id = $1 AND password = $2',
       [user_id, password]
     );
 
