@@ -9,14 +9,14 @@ router.post('/', async (req, res, next) => {
   try {
     const { user_id, title } = req.body;
 
-    const { rows } = await db.query(
+    const result = await db.query(
       'INSERT INTO playlists (user_id, title) VALUES ($1, $2) RETURNING id',
       [user_id, title]
     );
 
     res.json({
       status: 'success',
-      data: { playlist_id: rows[0].id, title }
+      data: { playlist_id: result.rows[0].id, title }
     });
   } catch (err) {
     next(err);
@@ -64,11 +64,11 @@ router.post('/:playlist_id/places', async (req, res, next) => {
 
     if (rows.length === 0) {
       // 없으면 DB에 새로 저장
-      const { rows: inserted } = await db.query(
+      const result = await db.query(
         'INSERT INTO places (kakao_id, name, category, lat, lng) VALUES ($1, $2, $3, $4, $5) RETURNING place_id',
         [kakao_id, name, category, lat, lng]
       );
-      place_id = inserted[0].place_id;
+      place_id = result.rows[0].place_id;
     } else {
       // 있으면 기존 ID 사용
       place_id = rows[0].place_id;

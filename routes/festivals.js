@@ -8,7 +8,7 @@ router.get('/', async (req, res, next) => {
     const month = req.query.month || new Date().getMonth() + 1;
 
     const { rows: festivals } = await db.query(
-      `SELECT * FROM festivals
+      `SELECT * FROM festivals 
        WHERE EXTRACT(MONTH FROM start_date) = $1 OR EXTRACT(MONTH FROM end_date) = $2
        ORDER BY start_date ASC`,
       [month, month]
