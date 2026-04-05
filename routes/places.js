@@ -37,7 +37,11 @@ router.get('/search', async (req, res, next) => {
 router.get('/trends', async (req, res, next) => {
   try {
     const { rows: places } = await db.query(
-      `SELECT * FROM places WHERE category = 'trend' LIMIT 10`
+      `SELECT p.*, mt.media_source, mt.keyword, mt.trend_score
+       FROM media_trends mt
+       JOIN places p ON p.place_id = mt.place_id
+       ORDER BY mt.trend_score DESC
+       LIMIT 10`
     );
 
     res.json({ status: 'success', data: { places } });
