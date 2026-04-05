@@ -10,7 +10,7 @@ router.post('/', async (req, res, next) => {
     const { user_id, session_id, user_message } = req.body;
 
     // DB에서 사용자 취향 조회
-    const [rows] = await db.query('SELECT tags FROM users WHERE id = ?', [user_id]);
+    const { rows } = await db.query('SELECT tags FROM users WHERE id = $1', [user_id]);
     const tags = rows.length > 0 ? JSON.parse(rows[0].tags) : [];
 
     // AI 서버로 전달
@@ -40,8 +40,8 @@ router.post('/', async (req, res, next) => {
     let places = [];
     if (aiResponse.recommendations?.length > 0) {
       const placeIds = aiResponse.recommendations.map(r => r.place_id);
-      const placeholders = placeIds.map(() => '?').join(', ');
-      const [placeRows] = await db.query(
+      const placeholders = placeIds.map((_, i) => `$${i + 1}`).join(', ');
+      const { rows: placeRows } = await db.query(
         `SELECT * FROM places WHERE place_id IN (${placeholders})`, placeIds
       );
       places = placeRows;

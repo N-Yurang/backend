@@ -10,7 +10,7 @@ router.get('/personalized', async (req, res, next) => {
     const { user_id } = req.query;
 
     // DB에서 사용자 취향 조회
-    const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [user_id]);
+    const { rows } = await db.query('SELECT * FROM users WHERE id = $1', [user_id]);
     if (rows.length === 0) {
       return res.status(404).json({ status: 'error', message: '유저를 찾을 수 없어요.' });
     }
@@ -37,8 +37,8 @@ router.get('/personalized', async (req, res, next) => {
 
     // AI가 준 place_id로 DB에서 상세 정보 조회
     const placeIds = aiResponse.recommendations.map(r => r.place_id);
-    const placeholders = placeIds.map(() => '?').join(', ');
-    const [places] = await db.query(
+    const placeholders = placeIds.map((_, i) => `$${i + 1}`).join(', ');
+    const { rows: places } = await db.query(
       `SELECT * FROM places WHERE place_id IN (${placeholders})`, placeIds
     );
 
@@ -54,8 +54,8 @@ router.get('/hidden-gems', async (req, res, next) => {
   try {
     const { user_id } = req.query;
 
-    const [places] = await db.query(
-      "SELECT * FROM places WHERE category = 'HIDDEN' ORDER BY RAND() LIMIT 10"
+    const { rows: places } = await db.query(
+      "SELECT * FROM places WHERE category = 'HIDDEN' ORDER BY RANDOM() LIMIT 10"
     );
 
     res.json({ status: 'success', data: { recommended_places: places } });
@@ -71,7 +71,7 @@ router.post('/keyword', async (req, res, next) => {
     const { user_id, keyword } = req.body;
 
     // DB에서 사용자 취향 조회
-    const [rows] = await db.query('SELECT tags FROM users WHERE id = ?', [user_id]);
+    const { rows } = await db.query('SELECT tags FROM users WHERE id = $1', [user_id]);
     const tags = rows.length > 0 ? JSON.parse(rows[0].tags) : [];
 
     // AI 서버로 키워드 + 취향 전달
@@ -89,8 +89,8 @@ router.post('/keyword', async (req, res, next) => {
     }
 
     const placeIds = aiResponse.recommendations.map(r => r.place_id);
-    const placeholders = placeIds.map(() => '?').join(', ');
-    const [places] = await db.query(
+    const placeholders = placeIds.map((_, i) => `$${i + 1}`).join(', ');
+    const { rows: places } = await db.query(
       `SELECT * FROM places WHERE place_id IN (${placeholders})`, placeIds
     );
 

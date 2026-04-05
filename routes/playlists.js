@@ -9,14 +9,14 @@ router.post('/', async (req, res, next) => {
   try {
     const { user_id, title } = req.body;
 
-    const [result] = await db.query(
-      'INSERT INTO playlists (user_id, title) VALUES (?, ?)',
+    const result = await db.query(
+      'INSERT INTO playlists (user_id, title) VALUES ($1, $2) RETURNING id',
       [user_id, title]
     );
 
     res.json({
       status: 'success',
-      data: { playlist_id: result.insertId, title }
+      data: { playlist_id: result.rows[0].id, title }
     });
   } catch (err) {
     next(err);
@@ -29,16 +29,16 @@ router.get('/:playlist_id', async (req, res, next) => {
   try {
     const { playlist_id } = req.params;
 
-    const [rows] = await db.query('SELECT * FROM playlists WHERE id = ?', [playlist_id]);
+    const { rows } = await db.query('SELECT * FROM playlists WHERE id = $1', [playlist_id]);
     if (rows.length === 0) {
       return res.status(404).json({ status: 'error', message: '플레이리스트를 찾을 수 없어요.' });
     }
 
     // 플레이리스트에 속한 장소 목록 조회
-    const [places] = await db.query(
+    const { rows: places } = await db.query(
       `SELECT p.* FROM places p
        JOIN playlist_places pp ON p.place_id = pp.place_id
-       WHERE pp.playlist_id = ?`,
+       WHERE pp.playlist_id = $1`,
       [playlist_id]
     );
 
@@ -59,16 +59,16 @@ router.post('/:playlist_id/places', async (req, res, next) => {
     const { kakao_id, name, category, lat, lng } = req.body;
 
     // 이미 DB에 있는 장소인지 확인
-    let [rows] = await db.query('SELECT * FROM places WHERE kakao_id = ?', [kakao_id]);
+    let { rows } = await db.query('SELECT * FROM places WHERE kakao_id = $1', [kakao_id]);
     let place_id;
 
     if (rows.length === 0) {
       // 없으면 DB에 새로 저장
-      const [result] = await db.query(
-        'INSERT INTO places (kakao_id, name, category, lat, lng) VALUES (?, ?, ?, ?, ?)',
+      const result = await db.query(
+        'INSERT INTO places (kakao_id, name, category, lat, lng) VALUES ($1, $2, $3, $4, $5) RETURNING place_id',
         [kakao_id, name, category, lat, lng]
       );
-      place_id = result.insertId;
+      place_id = result.rows[0].place_id;
     } else {
       // 있으면 기존 ID 사용
       place_id = rows[0].place_id;
@@ -76,7 +76,7 @@ router.post('/:playlist_id/places', async (req, res, next) => {
 
     // 플레이리스트에 연결
     await db.query(
-      'INSERT INTO playlist_places (playlist_id, place_id) VALUES (?, ?)',
+      'INSERT INTO playlist_places (playlist_id, place_id) VALUES ($1, $2)',
       [playlist_id, place_id]
     );
 
@@ -93,7 +93,7 @@ router.delete('/:playlist_id/places/:place_id', async (req, res, next) => {
     const { playlist_id, place_id } = req.params;
 
     await db.query(
-      'DELETE FROM playlist_places WHERE playlist_id = ? AND place_id = ?',
+      'DELETE FROM playlist_places WHERE playlist_id = $1 AND place_id = $2',
       [playlist_id, place_id]
     );
 
@@ -111,7 +111,7 @@ router.post('/:playlist_id/ai-recommend', async (req, res, next) => {
     const { user_id } = req.body;
 
     // 사용자 취향 조회
-    const [rows] = await db.query('SELECT tags FROM users WHERE id = ?', [user_id]);
+    const { rows } = await db.query('SELECT tags FROM users WHERE id = $1', [user_id]);
     const tags = rows.length > 0 ? JSON.parse(rows[0].tags) : [];
 
     // AI 서버로 추천 요청
@@ -129,8 +129,8 @@ router.post('/:playlist_id/ai-recommend', async (req, res, next) => {
     }
 
     const placeIds = aiResponse.recommendations.map(r => r.place_id);
-    const placeholders = placeIds.map(() => '?').join(', ');
-    const [places] = await db.query(
+    const placeholders = placeIds.map((_, i) => `$${i + 1}`).join(', ');
+    const { rows: places } = await db.query(
       `SELECT * FROM places WHERE place_id IN (${placeholders})`, placeIds
     );
 
@@ -148,10 +148,10 @@ router.post('/:playlist_id/optimize-route', async (req, res, next) => {
     const { start_time, transportation } = req.body;
 
     // 플레이리스트 장소 목록 조회
-    const [places] = await db.query(
+    const { rows: places } = await db.query(
       `SELECT p.place_id, p.name, p.lat, p.lng FROM places p
        JOIN playlist_places pp ON p.place_id = pp.place_id
-       WHERE pp.playlist_id = ?`,
+       WHERE pp.playlist_id = $1`,
       [playlist_id]
     );
 

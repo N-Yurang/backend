@@ -8,7 +8,7 @@ router.get('/:user_id', async (req, res, next) => {
   try {
     const { user_id } = req.params;
 
-    const [rows] = await db.query('SELECT * FROM users WHERE id = ?', [user_id]);
+    const { rows } = await db.query('SELECT * FROM users WHERE id = $1', [user_id]);
 
     if (rows.length === 0) {
       return res.status(404).json({ status: 'error', message: '유저를 찾을 수 없어요.' });
@@ -44,7 +44,7 @@ router.put('/:user_id/preferences', async (req, res, next) => {
     const { updated_tags } = req.body;
 
     await db.query(
-      'UPDATE users SET tags = ? WHERE id = ?',
+      'UPDATE users SET tags = $1 WHERE id = $2',
       [JSON.stringify(updated_tags), user_id]
     );
 

@@ -7,9 +7,9 @@ router.get('/', async (req, res, next) => {
   try {
     const month = req.query.month || new Date().getMonth() + 1;
 
-    const [festivals] = await db.query(
+    const { rows: festivals } = await db.query(
       `SELECT * FROM festivals 
-       WHERE MONTH(start_date) = ? OR MONTH(end_date) = ?
+       WHERE EXTRACT(MONTH FROM start_date) = $1 OR EXTRACT(MONTH FROM end_date) = $2
        ORDER BY start_date ASC`,
       [month, month]
     );
@@ -26,7 +26,7 @@ router.get('/:festival_id', async (req, res, next) => {
   try {
     const { festival_id } = req.params;
 
-    const [rows] = await db.query('SELECT * FROM festivals WHERE id = ?', [festival_id]);
+    const { rows } = await db.query('SELECT * FROM festivals WHERE id = $1', [festival_id]);
 
     if (rows.length === 0) {
       return res.status(404).json({ status: 'error', message: '축제를 찾을 수 없어요.' });

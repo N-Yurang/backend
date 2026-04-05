@@ -36,12 +36,8 @@ router.get('/search', async (req, res, next) => {
 // 미디어 트렌드 여행지 목록
 router.get('/trends', async (req, res, next) => {
   try {
-    const [places] = await db.query(
-      `SELECT p.place_id, p.name, p.location, p.image_url, p.description, p.tags,
-              mt.media_source, mt.keyword, mt.trend_score
-       FROM Places p
-       JOIN Media_Trends mt ON p.place_id = mt.place_id
-       ORDER BY mt.trend_score DESC LIMIT 10`
+    const { rows: places } = await db.query(
+      `SELECT * FROM places WHERE category = 'trend' LIMIT 10`
     );
 
     res.json({ status: 'success', data: { places } });
@@ -54,8 +50,8 @@ router.get('/trends', async (req, res, next) => {
 // 숨은 명소 목록
 router.get('/hidden', async (req, res, next) => {
   try {
-    const [places] = await db.query(
-      "SELECT * FROM places WHERE category = 'HIDDEN' ORDER BY RAND() LIMIT 10"
+    const { rows: places } = await db.query(
+      `SELECT * FROM places WHERE category = 'hidden' OR category = 'HIDDEN' ORDER BY RANDOM() LIMIT 10`
     );
 
     res.json({ status: 'success', data: { places } });
