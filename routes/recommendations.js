@@ -10,12 +10,15 @@ router.get('/personalized', async (req, res, next) => {
     const { user_id } = req.query;
 
     // DB에서 사용자 취향 조회
-    const { rows } = await db.query('SELECT * FROM users WHERE id = $1', [user_id]);
+    const { rows } = await db.query(
+      'SELECT travel_tags FROM user_preferences WHERE user_id = $1',
+      [user_id]
+    );
     if (rows.length === 0) {
       return res.status(404).json({ status: 'error', message: '유저를 찾을 수 없어요.' });
     }
 
-    const tags = JSON.parse(rows[0].tags);
+    const tags = rows[0].travel_tags || [];
 
     // AI 서버로 추천 요청
     let aiResponse;
@@ -71,8 +74,11 @@ router.post('/keyword', async (req, res, next) => {
     const { user_id, keyword } = req.body;
 
     // DB에서 사용자 취향 조회
-    const { rows } = await db.query('SELECT tags FROM users WHERE id = $1', [user_id]);
-    const tags = rows.length > 0 ? JSON.parse(rows[0].tags) : [];
+    const { rows } = await db.query(
+      'SELECT travel_tags FROM user_preferences WHERE user_id = $1',
+      [user_id]
+    );
+    const tags = rows.length > 0 ? (rows[0].travel_tags || []) : [];
 
     // AI 서버로 키워드 + 취향 전달
     let aiResponse;

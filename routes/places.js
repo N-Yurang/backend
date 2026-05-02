@@ -55,7 +55,46 @@ router.get('/trends', async (req, res, next) => {
 router.get('/hidden', async (req, res, next) => {
   try {
     const { rows: places } = await db.query(
-      `SELECT * FROM places WHERE category = 'hidden' OR category = 'HIDDEN' ORDER BY RANDOM() LIMIT 10`
+      `SELECT * FROM places WHERE category = 'HIDDEN' ORDER BY RANDOM() LIMIT 10`
+    );
+
+    res.json({ status: 'success', data: { places } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/places/filter?region=제주&keyword=바다&category=TREND
+// 지역 + 키워드 + 카테고리 필터링 (AI 전처리)
+router.get('/filter', async (req, res, next) => {
+  try {
+    const { region, keyword, category } = req.query;
+
+    const conditions = [];
+    const params = [];
+
+    if (region) {
+      params.push(`%${region}%`);
+      conditions.push(`location ILIKE $${params.length}`);
+    }
+    if (keyword) {
+      params.push(`%${keyword}%`);
+      conditions.push(`(name ILIKE $${params.length} OR description ILIKE $${params.length})`);
+    }
+    if (category) {
+      params.push(category.toUpperCase());
+      conditions.push(`category = $${params.length}`);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const { rows: places } = await db.query(
+      `SELECT place_id, name, location, latitude, longitude, category,
+              description, image_url, tags, trend_score, festival_score
+       FROM places
+       ${where}
+       ORDER BY trend_score DESC NULLS LAST`,
+      params
     );
 
     res.json({ status: 'success', data: { places } });

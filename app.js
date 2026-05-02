@@ -33,8 +33,10 @@ app.use('/api/destinations', require('./routes/destinations'));
 app.use('/api/festivals', require('./routes/festivals'));
 app.use('/api/recommendations', require('./routes/recommendations'));
 app.use('/api/chat', require('./routes/chat'));
-app.use('/api/playlists', require('./routes/playlists'));
-//app.use('/api/plans',           require('./routes/plans'));
+app.use('/api/playlists',    require('./routes/playlists'));
+app.use('/api/itineraries',  require('./routes/itineraries'));
+app.use('/api/v1/recommend', require('./routes/recommend'));
+//app.use('/api/plans',       require('./routes/plans'));
 
 // ── 기본 헬스체크 ──────────────────────────────
 app.get('/', (req, res) => {

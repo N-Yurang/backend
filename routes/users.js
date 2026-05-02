@@ -94,4 +94,36 @@ router.put('/preferences', authenticateToken, async (req, res, next) => {
   }
 });
 
+// PATCH /api/users/weights
+// 챗봇이 추출한 AI 가중치 저장 (weight_media, weight_festival)
+router.patch('/weights', authenticateToken, async (req, res, next) => {
+  try {
+    const { user_id } = req.user;
+    const { weight_media, weight_festival } = req.body;
+
+    if (weight_media === undefined && weight_festival === undefined) {
+      return res.status(400).json({ status: 'error', message: 'weight_media 또는 weight_festival 중 하나는 필요합니다.' });
+    }
+
+    if (
+      (weight_media !== undefined && (weight_media < 0 || weight_media > 1)) ||
+      (weight_festival !== undefined && (weight_festival < 0 || weight_festival > 1))
+    ) {
+      return res.status(400).json({ status: 'error', message: '가중치는 0~1 사이 값이어야 합니다.' });
+    }
+
+    await db.query(
+      `UPDATE user_preferences
+       SET weight_media    = COALESCE($1, weight_media),
+           weight_festival = COALESCE($2, weight_festival)
+       WHERE user_id = $3`,
+      [weight_media ?? null, weight_festival ?? null, user_id]
+    );
+
+    res.json({ status: 'success', message: '가중치가 저장되었습니다.' });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

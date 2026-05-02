@@ -20,13 +20,36 @@ router.get('/', async (req, res, next) => {
   }
 });
 
+// GET /api/festivals/by-date?date=2026-05-05
+// 특정 날짜에 열리는 축제 목록 (AI 전처리용)
+router.get('/by-date', async (req, res, next) => {
+  try {
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({ status: 'error', message: 'date 파라미터가 필요합니다. (YYYY-MM-DD)' });
+    }
+
+    const { rows: festivals } = await db.query(
+      `SELECT * FROM festivals
+       WHERE start_date <= $1 AND end_date >= $1
+       ORDER BY start_date ASC`,
+      [date]
+    );
+
+    res.json({ status: 'success', data: { festivals } });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/festivals/:festival_id
 // 축제 상세 정보
 router.get('/:festival_id', async (req, res, next) => {
   try {
     const { festival_id } = req.params;
 
-    const { rows } = await db.query('SELECT * FROM festivals WHERE id = $1', [festival_id]);
+    const { rows } = await db.query('SELECT * FROM festivals WHERE festival_id = $1', [festival_id]);
 
     if (rows.length === 0) {
       return res.status(404).json({ status: 'error', message: '축제를 찾을 수 없어요.' });
