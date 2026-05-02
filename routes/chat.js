@@ -10,8 +10,11 @@ router.post('/', async (req, res, next) => {
     const { user_id, session_id, user_message } = req.body;
 
     // DB에서 사용자 취향 조회
-    const { rows } = await db.query('SELECT tags FROM users WHERE id = $1', [user_id]);
-    const tags = rows.length > 0 ? JSON.parse(rows[0].tags) : [];
+    const { rows } = await db.query(
+      'SELECT travel_tags FROM user_preferences WHERE user_id = $1',
+      [user_id]
+    );
+    const tags = rows.length > 0 ? (rows[0].travel_tags || []) : [];
 
     // AI 서버로 전달
     let aiResponse;
