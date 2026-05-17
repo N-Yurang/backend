@@ -84,9 +84,10 @@ router.post('/', authenticateToken, async (req, res, next) => {
       );
     }
 
-    await db.query(
+    const { rows: savedItineraries } = await db.query(
       `INSERT INTO recommended_itineraries (user_id, path_data)
-       VALUES ($1, $2)`,
+       VALUES ($1, $2)
+       RETURNING id`,
       [
         user_id,
         JSON.stringify({
@@ -97,10 +98,12 @@ router.post('/', authenticateToken, async (req, res, next) => {
         }),
       ]
     );
+    const recommendedItineraryId = savedItineraries[0].id;
 
     res.json({
       status: 'success',
       data: {
+        recommended_itinerary_id: recommendedItineraryId,
         reply: aiData.reply || '',
         itinerary,
         total_distance: totalDistance,
