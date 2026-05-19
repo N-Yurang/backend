@@ -32,6 +32,8 @@ app.use('/api/places', require('./routes/places'));
 app.use('/api/destinations', require('./routes/destinations'));
 app.use('/api/festivals', require('./routes/festivals'));
 app.use('/api/itineraries',  require('./routes/itineraries'));
+app.use('/api/likes', require('./routes/likes'));
+app.use('/api/courses', require('./routes/courses'));
 app.use('/api/v1/recommend', require('./routes/recommend'));
 //app.use('/api/plans',       require('./routes/plans'));
 
