@@ -404,6 +404,52 @@ router.get('/:course_id', authenticateToken, async (req, res, next) => {
   }
 });
 
+// DELETE /api/courses/:course_id
+// Deletes one saved course owned by the current user.
+router.delete('/:course_id', authenticateToken, async (req, res, next) => {
+  const client = await db.connect();
+
+  try {
+    const { user_id } = req.user;
+    const courseId = toPositiveInteger(req.params.course_id);
+
+    if (!courseId) {
+      return res.status(400).json({ status: 'error', message: 'course_id must be a positive integer.' });
+    }
+
+    await client.query('BEGIN');
+
+    const { rows } = await client.query(
+      `SELECT course_id
+       FROM courses
+       WHERE course_id = $1 AND user_id = $2
+       FOR UPDATE`,
+      [courseId, user_id]
+    );
+
+    if (rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ status: 'error', message: 'Course not found.' });
+    }
+
+    await client.query('DELETE FROM course_details WHERE course_id = $1', [courseId]);
+    await client.query('DELETE FROM courses WHERE course_id = $1 AND user_id = $2', [courseId, user_id]);
+
+    await client.query('COMMIT');
+
+    res.json({
+      status: 'success',
+      message: 'Course deleted.',
+      data: { course_id: courseId },
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+});
+
 // POST /api/courses
 // Saves a course selected by the user.
 router.post('/', authenticateToken, async (req, res, next) => {
