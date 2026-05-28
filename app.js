@@ -29,6 +29,7 @@ app.use(cors({
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/places', require('./routes/places'));
+app.use('/api/search', require('./routes/search'));
 app.use('/api/destinations', require('./routes/destinations'));
 app.use('/api/festivals', require('./routes/festivals'));
 app.use('/api/itineraries',  require('./routes/itineraries'));
