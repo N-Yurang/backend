@@ -17,11 +17,8 @@ function parsePositiveInt(value, fallback, max = 10) {
 function toPlaceItem(place) {
   return {
     type: 'place',
-    id: place.place_id,
     place_id: place.place_id,
-    title: place.name,
     name: place.name,
-    subtitle: place.location,
     location: place.location,
     description: place.description,
     image_url: place.image_url,
@@ -37,11 +34,8 @@ function toPlaceItem(place) {
 function toFestivalItem(festival) {
   return {
     type: 'festival',
-    id: festival.festival_id,
     festival_id: festival.festival_id,
-    title: festival.name,
     name: festival.name,
-    subtitle: festival.location,
     location: festival.location,
     description: festival.description,
     image_url: festival.image_url,
@@ -66,7 +60,7 @@ function formatFestivalDate(startDate, endDate) {
 
 function sortSearchItems(a, b) {
   if (b.match_rank !== a.match_rank) return b.match_rank - a.match_rank;
-  return String(a.title || '').localeCompare(String(b.title || ''), 'ko');
+  return String(a.name || '').localeCompare(String(b.name || ''), 'ko');
 }
 
 function stripInternalRank(item) {
