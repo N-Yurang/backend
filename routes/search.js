@@ -3,9 +3,18 @@ const router = express.Router();
 const db = require('../db/connection');
 
 const DEFAULT_SUGGEST_LIMIT = 5;
+const MIN_SUGGEST_QUERY_LENGTH = 1;
 
 function normalizeQuery(value) {
   return String(value || '').trim().slice(0, 80);
+}
+
+function normalizeSearchKeyword(value) {
+  return normalizeQuery(value).replace(/\s+/g, '');
+}
+
+function getSpacelessSql(column) {
+  return `regexp_replace(COALESCE(${column}, ''), '[[:space:]]+', '', 'g')`;
 }
 
 function parsePositiveInt(value, fallback, max = 10) {
@@ -68,30 +77,36 @@ function stripInternalRank(item) {
   return publicItem;
 }
 
-async function searchPlaces(query, { limit } = {}) {
-  const prefix = `${query}%`;
-  const contains = `%${query}%`;
-  const params = [query, prefix, contains];
+async function searchPlaces(keyword, { limit } = {}) {
+  const prefix = `${keyword}%`;
+  const contains = `%${keyword}%`;
+  const params = [keyword, prefix, contains];
   const limitClause = Number.isInteger(limit) ? `LIMIT $${params.push(limit)}` : '';
 
   const { rows } = await db.query(
-    `SELECT place_id, name, location, latitude, longitude, category,
-            description, image_url, tags,
+    `SELECT p.place_id, p.name, p.location, p.latitude, p.longitude, p.category,
+            p.description, p.image_url, p.tags,
             CASE
-              WHEN lower(COALESCE(name, '')) = lower($1) THEN 100
-              WHEN COALESCE(name, '') ILIKE $2 THEN 90
-              WHEN COALESCE(name, '') ILIKE $3 THEN 80
-              WHEN COALESCE(location, '') ILIKE $3 THEN 65
-              WHEN COALESCE(description, '') ILIKE $3 THEN 50
-              WHEN COALESCE(tags::text, '') ILIKE $3 THEN 35
+              WHEN lower(search_text.name) = lower($1) THEN 100
+              WHEN search_text.name ILIKE $2 THEN 90
+              WHEN search_text.name ILIKE $3 THEN 80
+              WHEN search_text.location ILIKE $3 THEN 65
+              WHEN search_text.description ILIKE $3 THEN 50
+              WHEN search_text.tags ILIKE $3 THEN 35
               ELSE 0
             END AS match_rank
-     FROM places
-     WHERE COALESCE(name, '') ILIKE $3
-        OR COALESCE(location, '') ILIKE $3
-        OR COALESCE(tags::text, '') ILIKE $3
-        OR COALESCE(description, '') ILIKE $3
-     ORDER BY match_rank DESC, name ASC
+     FROM places p
+     CROSS JOIN LATERAL (
+       SELECT ${getSpacelessSql('p.name')} AS name,
+              ${getSpacelessSql('p.location')} AS location,
+              ${getSpacelessSql('p.description')} AS description,
+              ${getSpacelessSql('p.tags::text')} AS tags
+     ) search_text
+     WHERE search_text.name ILIKE $3
+        OR search_text.location ILIKE $3
+        OR search_text.tags ILIKE $3
+        OR search_text.description ILIKE $3
+     ORDER BY match_rank DESC, p.name ASC
      ${limitClause}`,
     params
   );
@@ -99,27 +114,32 @@ async function searchPlaces(query, { limit } = {}) {
   return rows;
 }
 
-async function searchFestivals(query, { limit } = {}) {
-  const prefix = `${query}%`;
-  const contains = `%${query}%`;
-  const params = [query, prefix, contains];
+async function searchFestivals(keyword, { limit } = {}) {
+  const prefix = `${keyword}%`;
+  const contains = `%${keyword}%`;
+  const params = [keyword, prefix, contains];
   const limitClause = Number.isInteger(limit) ? `LIMIT $${params.push(limit)}` : '';
 
   const { rows } = await db.query(
-    `SELECT *,
+    `SELECT f.*,
             CASE
-              WHEN lower(COALESCE(name, '')) = lower($1) THEN 100
-              WHEN COALESCE(name, '') ILIKE $2 THEN 90
-              WHEN COALESCE(name, '') ILIKE $3 THEN 80
-              WHEN COALESCE(location, '') ILIKE $3 THEN 65
-              WHEN COALESCE(description, '') ILIKE $3 THEN 50
+              WHEN lower(search_text.name) = lower($1) THEN 100
+              WHEN search_text.name ILIKE $2 THEN 90
+              WHEN search_text.name ILIKE $3 THEN 80
+              WHEN search_text.location ILIKE $3 THEN 65
+              WHEN search_text.description ILIKE $3 THEN 50
               ELSE 0
             END AS match_rank
-     FROM festivals
-     WHERE COALESCE(name, '') ILIKE $3
-        OR COALESCE(location, '') ILIKE $3
-        OR COALESCE(description, '') ILIKE $3
-     ORDER BY match_rank DESC, name ASC
+     FROM festivals f
+     CROSS JOIN LATERAL (
+       SELECT ${getSpacelessSql('f.name')} AS name,
+              ${getSpacelessSql('f.location')} AS location,
+              ${getSpacelessSql('f.description')} AS description
+     ) search_text
+     WHERE search_text.name ILIKE $3
+        OR search_text.location ILIKE $3
+        OR search_text.description ILIKE $3
+     ORDER BY match_rank DESC, f.name ASC
      ${limitClause}`,
     params
   );
@@ -131,15 +151,16 @@ async function searchFestivals(query, { limit } = {}) {
 router.get('/suggest', async (req, res, next) => {
   try {
     const query = normalizeQuery(req.query.q);
+    const keyword = normalizeSearchKeyword(query);
     const limit = parsePositiveInt(req.query.limit, DEFAULT_SUGGEST_LIMIT, 10);
 
-    if (query.length < 2) {
+    if (keyword.length < MIN_SUGGEST_QUERY_LENGTH) {
       return res.json({ status: 'success', data: { query, items: [] } });
     }
 
     const [places, festivals] = await Promise.all([
-      searchPlaces(query, { limit }),
-      searchFestivals(query, { limit }),
+      searchPlaces(keyword, { limit }),
+      searchFestivals(keyword, { limit }),
     ]);
 
     const items = [
@@ -157,8 +178,9 @@ router.get('/suggest', async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const query = normalizeQuery(req.query.q);
+    const keyword = normalizeSearchKeyword(query);
 
-    if (!query) {
+    if (!keyword) {
       return res.json({
         status: 'success',
         data: {
@@ -169,8 +191,8 @@ router.get('/', async (req, res, next) => {
     }
 
     const [places, festivals] = await Promise.all([
-      searchPlaces(query),
-      searchFestivals(query),
+      searchPlaces(keyword),
+      searchFestivals(keyword),
     ]);
 
     res.json({
