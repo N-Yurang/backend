@@ -31,6 +31,20 @@ const toDistanceKmOrNull = (value) => {
   return null;
 };
 
+const normalizeMemoInput = (value) => {
+  if (value === null) return { memo: null };
+  if (typeof value !== 'string') {
+    return { error: 'memo must be a string or null.' };
+  }
+
+  const memo = value.trim();
+  if (memo.length > 1000) {
+    return { error: 'memo must be 1000 characters or fewer.' };
+  }
+
+  return { memo: memo || null };
+};
+
 const isUuid = (value) => (
   typeof value === 'string' &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
@@ -309,6 +323,71 @@ router.post('/from-itinerary/:itinerary_id', authenticateToken, async (req, res,
           ...saved.meta,
         },
       },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/courses/:course_id/details/:detail_id/memo
+// Updates one place memo in a saved course owned by the current user.
+router.patch('/:course_id/details/:detail_id/memo', authenticateToken, async (req, res, next) => {
+  try {
+    const { user_id } = req.user;
+    const courseId = toPositiveInteger(req.params.course_id);
+    const detailId = toPositiveInteger(req.params.detail_id);
+
+    if (!courseId) {
+      return res.status(400).json({ status: 'error', message: 'course_id must be a positive integer.' });
+    }
+
+    if (!detailId) {
+      return res.status(400).json({ status: 'error', message: 'detail_id must be a positive integer.' });
+    }
+
+    if (!Object.prototype.hasOwnProperty.call(req.body || {}, 'memo')) {
+      return res.status(400).json({ status: 'error', message: 'memo is required.' });
+    }
+
+    const normalizedMemo = normalizeMemoInput(req.body.memo);
+    if (normalizedMemo.error) {
+      return res.status(400).json({ status: 'error', message: normalizedMemo.error });
+    }
+
+    const detailColumns = await getColumnSet('course_details');
+    if (!detailColumns.has('memo')) {
+      return res.status(501).json({
+        status: 'error',
+        message: 'course_details.memo column is not available.',
+      });
+    }
+
+    const { rows } = await db.query(
+      `UPDATE course_details cd
+       SET memo = $1
+       FROM courses c
+       WHERE cd.course_id = c.course_id
+         AND cd.course_id = $2
+         AND cd.detail_id = $3
+         AND c.user_id = $4
+       RETURNING
+         cd.detail_id,
+         cd.course_id,
+         cd.place_id,
+         cd.visit_order,
+         cd.travel_time_to_next,
+         cd.memo`,
+      [normalizedMemo.memo, courseId, detailId, user_id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'Course detail not found.' });
+    }
+
+    res.json({
+      status: 'success',
+      message: 'Course detail memo updated.',
+      data: { detail: rows[0] },
     });
   } catch (err) {
     next(err);
